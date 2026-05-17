@@ -37,7 +37,6 @@ from flask_compress import Compress
 from flask_session import Session
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-from superset.constants import CHANGE_ME_SECRET_KEY
 from superset.databases.utils import make_url_safe
 from superset.extensions import (
     _event_logger,
@@ -635,7 +634,14 @@ class SupersetAppInitializer:  # pylint: disable=too-many-public-methods
         self.init_all_dependencies_and_extensions()
 
     def check_secret_key(self) -> None:
-        def log_default_secret_key_warning() -> None:
+        if self.superset_app.config["TESTING"] or is_test():
+            return
+
+        insecure = (
+            not self.config["SECRET_KEY"]
+            or self.config["SECRET_KEY"] == "CHANGE_ME_TO_A_COMPLEX_RANDOM_SECRET"  # noqa: S105
+        )
+        if insecure:
             top_banner = 80 * "-" + "\n" + 36 * " " + "WARNING\n" + 80 * "-"
             bottom_banner = 80 * "-" + "\n" + 80 * "-"
             logger.warning(top_banner)
@@ -649,17 +655,6 @@ class SupersetAppInitializer:  # pylint: disable=too-many-public-methods
                 "configuration/configuring-superset#specifying-a-secret_key"
             )
             logger.warning(bottom_banner)
-
-        if self.config["SECRET_KEY"] == CHANGE_ME_SECRET_KEY:
-            if (
-                self.superset_app.debug
-                or self.superset_app.config["TESTING"]
-                or is_test()
-            ):
-                logger.warning("Debug mode identified with default secret key")
-                log_default_secret_key_warning()
-                return
-            log_default_secret_key_warning()
             logger.error("Refusing to start due to insecure SECRET_KEY")
             sys.exit(1)
 
