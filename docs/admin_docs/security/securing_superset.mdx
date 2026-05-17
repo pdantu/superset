@@ -108,11 +108,11 @@ While Superset's built-in database authentication is convenient, for production 
 
 ### **Content Security Policy (CSP) and Other Headers**
 
-Superset can use Flask-Talisman to set security headers. However, it must be explicitly enabled.
+Superset uses Flask-Talisman to set HTTP security headers (CSP, HSTS, X-Frame-Options, etc.). Talisman is enabled by default (`TALISMAN_ENABLED = True`). If Talisman is explicitly disabled, a warning will be logged at startup.
 
-> #### ⚠️ Important: Talisman is Disabled by Default
+> #### ⚠️ Important: Do Not Disable Talisman in Production
 >
-> In Superset 4.0 and later, Talisman is disabled by default (`TALISMAN_ENABLED = False`). You **must** explicitly enable it in your `superset_config.py` for the security headers defined in `TALISMAN_CONFIG` to take effect.
+> Disabling Talisman (`TALISMAN_ENABLED = False`) removes critical HTTP security headers and leaves your deployment vulnerable to XSS, clickjacking, and protocol downgrade attacks. Only disable it if you are providing equivalent protections through an external service (e.g., a reverse proxy or WAF).
 
 Here's the documentation section how how to set up Talisman: https://superset.apache.org/admin-docs/security/#content-security-policy-csp
 

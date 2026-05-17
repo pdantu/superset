@@ -190,6 +190,66 @@ class TestSupersetAppInitializer:
         )
 
 
+class TestTalismanWarning:
+    MIDDLEWARE_BASE_CONFIG = {
+        "ENABLE_CORS": False,
+        "ENABLE_PROXY_FIX": False,
+        "ENABLE_CHUNK_ENCODING": False,
+        "UPLOAD_FOLDER": "",
+        "ADDITIONAL_MIDDLEWARE": [],
+        "DEBUG": False,
+        "CONTENT_SECURITY_POLICY_WARNING": True,
+        "TALISMAN_DEV_CONFIG": {},
+    }
+
+    @patch("superset.initialization.Compress")
+    @patch("superset.initialization.talisman")
+    @patch("superset.initialization.logger")
+    def test_talisman_disabled_logs_warning(
+        self, mock_logger, mock_talisman, mock_compress
+    ):
+        """When TALISMAN_ENABLED is False, a security warning is logged."""
+        mock_app = MagicMock()
+        mock_app.debug = False
+        mock_app.config = {
+            **self.MIDDLEWARE_BASE_CONFIG,
+            "TALISMAN_ENABLED": False,
+            "TALISMAN_CONFIG": {"content_security_policy": {}},
+        }
+        app_initializer = SupersetAppInitializer(mock_app)
+        app_initializer.configure_middlewares()
+
+        mock_talisman.init_app.assert_not_called()
+        mock_logger.warning.assert_any_call(
+            "TALISMAN_ENABLED is set to False. HTTP security headers "
+            "(CSP, HSTS, X-Frame-Options, etc.) are disabled. This leaves "
+            "your deployment vulnerable to XSS, clickjacking, and protocol "
+            "downgrade attacks. Set TALISMAN_ENABLED=True and configure "
+            "TALISMAN_CONFIG to enable these protections."
+        )
+
+    @patch("superset.initialization.Compress")
+    @patch("superset.initialization.talisman")
+    @patch("superset.initialization.logger")
+    def test_talisman_enabled_no_disabled_warning(
+        self, mock_logger, mock_talisman, mock_compress
+    ):
+        """When TALISMAN_ENABLED is True, no disabled-warning is logged."""
+        mock_app = MagicMock()
+        mock_app.debug = False
+        mock_app.config = {
+            **self.MIDDLEWARE_BASE_CONFIG,
+            "TALISMAN_ENABLED": True,
+            "TALISMAN_CONFIG": {"content_security_policy": {"default-src": ["'self'"]}},
+        }
+        app_initializer = SupersetAppInitializer(mock_app)
+        app_initializer.configure_middlewares()
+
+        mock_talisman.init_app.assert_called_once()
+        for call in mock_logger.warning.call_args_list:
+            assert "TALISMAN_ENABLED is set to False" not in str(call)
+
+
 class TestCreateAppRoot:
     """Test app root resolution precedence in create_app."""
 
