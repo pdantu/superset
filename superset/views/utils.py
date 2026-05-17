@@ -58,7 +58,11 @@ from superset.viz import BaseViz
 logger = logging.getLogger(__name__)
 stats_logger = app.config["STATS_LOGGER"]
 
-REJECTED_FORM_DATA_KEYS: list[str] = []
+REJECTED_FORM_DATA_KEYS: list[str] = [
+    "js_tooltip",
+    "js_onclick_href",
+    "js_data_mutator",
+]
 
 
 def redirect_to_login(next_target: str | None = None) -> FlaskResponse:

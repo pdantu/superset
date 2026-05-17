@@ -35,6 +35,7 @@ import {
   Column,
   ContextMenuFilters,
   ensureIsArray,
+  FeatureFlag,
   getChartMetadataRegistry,
   getExtensionsRegistry,
   isFeatureEnabled,

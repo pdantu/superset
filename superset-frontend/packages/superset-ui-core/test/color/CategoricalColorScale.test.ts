@@ -528,7 +528,7 @@ describe('CategoricalColorScale', () => {
       labelsColorMap.reset();
     });
 
-    test('shared dimension labels get the same color from palette order', () => {
+    test('collision avoidance reassigns Classic Cars when Trains locks red from the dashboard', () => {
       const PALETTE = ['red', 'blue', 'green'];
 
       const chartAScale = new CategoricalColorScale(PALETTE);
@@ -544,7 +544,8 @@ describe('CategoricalColorScale', () => {
       const trainsColor = chartBScale.chartLabelsColorMap.get('Trains');
 
       expect(trainsColor).toBe('red');
-      expect(classicCarsColor).toBe('red');
+      expect(classicCarsColor).toBeDefined();
+      expect(classicCarsColor).not.toBe('red');
     });
 
     test('fix: Classic Cars is reassigned when Trains locks red from the dashboard', () => {
