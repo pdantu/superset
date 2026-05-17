@@ -18,6 +18,7 @@
 import os
 from unittest.mock import MagicMock, patch
 
+import pytest
 from sqlalchemy.exc import OperationalError
 
 from superset.app import AppRootMiddleware, create_app, SupersetApp
@@ -188,6 +189,92 @@ class TestSupersetAppInitializer:
             app_initializer._db_uri_cache
             == "postgresql://realuser:realpass@realhost:5432/realdb"
         )
+
+
+class TestCheckJwtSecrets:
+    def _make_initializer(
+        self,
+        guest_secret: str = "",
+        async_secret: str = "",
+        debug: bool = False,
+        testing: bool = False,
+    ) -> SupersetAppInitializer:
+        mock_app = MagicMock()
+        mock_app.debug = debug
+        mock_app.config = {
+            "GUEST_TOKEN_JWT_SECRET": guest_secret,
+            "GLOBAL_ASYNC_QUERIES_JWT_SECRET": async_secret,
+            "TESTING": testing,
+        }
+        return SupersetAppInitializer(mock_app)
+
+    @patch("superset.initialization.is_test", return_value=False)
+    def test_raises_when_both_secrets_empty(
+        self, mock_is_test: MagicMock
+    ) -> None:
+        init = self._make_initializer()
+        with pytest.raises(
+            RuntimeError, match="GUEST_TOKEN_JWT_SECRET is not set"
+        ):
+            init.check_jwt_secrets()
+
+    @patch("superset.initialization.is_test", return_value=False)
+    def test_raises_when_guest_secret_is_placeholder(  # noqa: S106
+        self, mock_is_test: MagicMock
+    ) -> None:
+        init = self._make_initializer(
+            guest_secret="test-guest-secret-change-me",  # noqa: S106
+            async_secret="a-real-production-secret-value!",  # noqa: S106
+        )
+        with pytest.raises(
+            RuntimeError, match="GUEST_TOKEN_JWT_SECRET is not set"
+        ):
+            init.check_jwt_secrets()
+
+    @patch("superset.initialization.is_test", return_value=False)
+    def test_raises_when_async_secret_is_placeholder(  # noqa: S106
+        self, mock_is_test: MagicMock
+    ) -> None:
+        init = self._make_initializer(
+            guest_secret="a-real-production-secret-value!",  # noqa: S106
+            async_secret="test-secret-change-me",  # noqa: S106
+        )
+        with pytest.raises(
+            RuntimeError,
+            match="GLOBAL_ASYNC_QUERIES_JWT_SECRET is not set",
+        ):
+            init.check_jwt_secrets()
+
+    @patch("superset.initialization.is_test", return_value=False)
+    def test_no_error_when_secrets_are_configured(  # noqa: S106
+        self, mock_is_test: MagicMock
+    ) -> None:
+        init = self._make_initializer(
+            guest_secret="a-real-production-secret-value!",  # noqa: S106
+            async_secret="another-real-production-secret!",  # noqa: S106
+        )
+        init.check_jwt_secrets()  # should not raise
+
+    @patch("superset.initialization.is_test", return_value=False)
+    def test_skipped_in_debug_mode(
+        self, mock_is_test: MagicMock
+    ) -> None:
+        init = self._make_initializer(debug=True)
+        init.check_jwt_secrets()  # should not raise
+
+    @patch("superset.initialization.is_test", return_value=False)
+    def test_skipped_when_testing_flag_set(
+        self, mock_is_test: MagicMock
+    ) -> None:
+        init = self._make_initializer(testing=True)
+        init.check_jwt_secrets()  # should not raise
+
+    @patch("superset.initialization.is_test", return_value=True)
+    def test_skipped_when_is_test_returns_true(
+        self, mock_is_test: MagicMock
+    ) -> None:
+        init = self._make_initializer()
+        init.check_jwt_secrets()  # should not raise
 
 
 class TestCreateAppRoot:

@@ -634,6 +634,40 @@ class SupersetAppInitializer:  # pylint: disable=too-many-public-methods
 
         self.init_all_dependencies_and_extensions()
 
+    def check_jwt_secrets(self) -> None:
+        _INSECURE_JWT_PLACEHOLDERS = {  # noqa: N806
+            "",
+            "test-secret-change-me",
+            "test-guest-secret-change-me",
+        }
+
+        if self.superset_app.debug or self.config.get("TESTING") or is_test():
+            return
+
+        errors: list[str] = []
+        for key, env_var in (
+            (
+                "GLOBAL_ASYNC_QUERIES_JWT_SECRET",
+                "SUPERSET_GLOBAL_ASYNC_QUERIES_JWT_SECRET",
+            ),
+            (
+                "GUEST_TOKEN_JWT_SECRET",
+                "SUPERSET_GUEST_TOKEN_JWT_SECRET",
+            ),
+        ):
+            value = self.config.get(key, "")
+            if value in _INSECURE_JWT_PLACEHOLDERS:
+                errors.append(
+                    f"{key} is not set. Please supply a secure value via the "
+                    f"{env_var} environment variable or in superset_config.py."
+                )
+
+        if errors:
+            raise RuntimeError(
+                "Insecure JWT secret configuration detected:\n"
+                + "\n".join(errors)
+            )
+
     def check_secret_key(self) -> None:
         def log_default_secret_key_warning() -> None:
             top_banner = 80 * "-" + "\n" + 36 * " " + "WARNING\n" + 80 * "-"
@@ -741,6 +775,7 @@ class SupersetAppInitializer:  # pylint: disable=too-many-public-methods
         """
         self.pre_init()
         self.check_secret_key()
+        self.check_jwt_secrets()
         self.configure_session()
         # Configuration of logging must be done first to apply the formatter properly
         self.configure_logging()
