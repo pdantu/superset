@@ -905,6 +905,13 @@ class SupersetAppInitializer:  # pylint: disable=too-many-public-methods
 
         if talisman_enabled:
             talisman.init_app(self.superset_app, **talisman_config)
+        else:
+            logger.warning(
+                "TALISMAN_ENABLED is set to False, disabling HTTP security headers "
+                "(CSP, HSTS, X-Frame-Options, etc.). This leaves the application "
+                "vulnerable to XSS, clickjacking, and protocol downgrade attacks. "
+                "Set TALISMAN_ENABLED=True to enable security headers."
+            )
 
         show_csp_warning = False
         if (
