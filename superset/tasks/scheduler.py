@@ -161,22 +161,16 @@ def prune_log() -> None:
         logger.exception("An exception occurred while pruning report schedule logs")
 
 
-@celery_app.task(name="prune_query", bind=True)
+@celery_app.task(name="prune_query")
 def prune_query(
-    self: Task, retention_period_days: int | None = None, **kwargs: Any
+    retention_period_days: int | None = None,
 ) -> None:
     stats_logger: BaseStatsLogger = current_app.config["STATS_LOGGER"]
     stats_logger.incr("prune_query")
 
-    # TODO: Deprecated: Remove support for passing retention period via options in 6.0
     if retention_period_days is None:
-        retention_period_days = prune_query.request.properties.get(
-            "retention_period_days"
-        )
-        logger.warning(
-            "Your `prune_query` beat schedule uses `options` to pass the retention "
-            "period, please use `kwargs` instead."
-        )
+        logger.error("`prune_query` requires `retention_period_days` via kwargs")
+        return
 
     try:
         QueryPruneCommand(retention_period_days).run()
@@ -184,25 +178,17 @@ def prune_query(
         logger.exception("An error occurred while pruning queries: %s", ex)
 
 
-@celery_app.task(name="prune_logs", bind=True)
+@celery_app.task(name="prune_logs")
 def prune_logs(
-    self: Task,
     retention_period_days: int | None = None,
     max_rows_per_run: int | None = None,
-    **kwargs: Any,
 ) -> None:
     stats_logger: BaseStatsLogger = current_app.config["STATS_LOGGER"]
     stats_logger.incr("prune_logs")
 
-    # TODO: Deprecated: Remove support for passing retention period via options in 6.0
     if retention_period_days is None:
-        retention_period_days = prune_logs.request.properties.get(
-            "retention_period_days"
-        )
-        logger.warning(
-            "Your `prune_logs` beat schedule uses `options` to pass the retention "
-            "period, please use `kwargs` instead."
-        )
+        logger.error("`prune_logs` requires `retention_period_days` via kwargs")
+        return
 
     try:
         LogPruneCommand(retention_period_days, max_rows_per_run).run()
@@ -210,25 +196,17 @@ def prune_logs(
         logger.exception("An error occurred while pruning logs: %s", ex)
 
 
-@celery_app.task(name="prune_tasks", bind=True)
+@celery_app.task(name="prune_tasks")
 def prune_tasks(
-    self: Task,
     retention_period_days: int | None = None,
     max_rows_per_run: int | None = None,
-    **kwargs: Any,
 ) -> None:
     stats_logger: BaseStatsLogger = current_app.config["STATS_LOGGER"]
     stats_logger.incr("prune_tasks")
 
-    # TODO: Deprecated: Remove support for passing retention period via options in 6.0
     if retention_period_days is None:
-        retention_period_days = prune_tasks.request.properties.get(
-            "retention_period_days"
-        )
-        logger.warning(
-            "Your `prune_tasks` beat schedule uses `options` to pass the "
-            "retention period, please use `kwargs` instead."
-        )
+        logger.error("`prune_tasks` requires `retention_period_days` via kwargs")
+        return
 
     try:
         TaskPruneCommand(retention_period_days, max_rows_per_run).run()
