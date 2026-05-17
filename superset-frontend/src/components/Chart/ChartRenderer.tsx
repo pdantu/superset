@@ -202,8 +202,7 @@ class ChartRenderer extends Component<ChartRendererProps, ChartRendererState> {
     )?.suppressContextMenu;
     this.state = {
       showContextMenu:
-        props.source === ChartSource.Dashboard &&
-        !suppressContextMenu,
+        props.source === ChartSource.Dashboard && !suppressContextMenu,
       inContextMenu: false,
       legendState: undefined,
       legendIndex: 0,

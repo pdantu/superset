@@ -177,8 +177,7 @@ const ChartContextMenu = (
   const menuItems: MenuItem[] = [];
 
   const showDrillToDetail =
-    canDrillToDetail &&
-    isDisplayed(ContextMenuItem.DrillToDetail);
+    canDrillToDetail && isDisplayed(ContextMenuItem.DrillToDetail);
 
   const showDrillBy =
     isFeatureEnabled(FeatureFlag.DrillBy) &&
