@@ -35,7 +35,6 @@ import {
   Column,
   ContextMenuFilters,
   ensureIsArray,
-  FeatureFlag,
   getChartMetadataRegistry,
   getExtensionsRegistry,
   isFeatureEnabled,
@@ -178,7 +177,6 @@ const ChartContextMenu = (
   const menuItems: MenuItem[] = [];
 
   const showDrillToDetail =
-    isFeatureEnabled(FeatureFlag.DrillToDetail) &&
     canDrillToDetail &&
     isDisplayed(ContextMenuItem.DrillToDetail);
 

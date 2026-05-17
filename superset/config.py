@@ -799,21 +799,6 @@ DEFAULT_FEATURE_FLAGS: dict[str, bool] = {
     # @lifecycle: stable
     # @category: internal
     "ENABLE_FACTORY_RESET_COMMAND": False,
-    # =================================================================
-    # DEPRECATED
-    # =================================================================
-    # These flags default to True and will be removed in a future major
-    # release. Set to True in your config to avoid unexpected changes.
-    # -----------------------------------------------------------------
-    # Avoid color collisions in charts by using distinct colors
-    # @lifecycle: deprecated
-    "AVOID_COLORS_COLLISION": True,
-    # Enable drill-to-detail functionality in charts
-    # @lifecycle: deprecated
-    "DRILL_TO_DETAIL": True,
-    # Allow JavaScript in chart controls. WARNING: XSS security vulnerability!
-    # @lifecycle: deprecated
-    "ENABLE_JAVASCRIPT_CONTROLS": False,
 }
 
 # ------------------------------

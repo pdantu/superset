@@ -19,8 +19,6 @@
 
 import { t } from '@apache-superset/core/translation';
 import {
-  FeatureFlag,
-  isFeatureEnabled,
   validateNonEmpty,
   getCategoricalSchemeRegistry,
   getSequentialSchemeRegistry,
@@ -126,12 +124,10 @@ export function jsFunctionControl(
         {extraDescr}
       </div>
     ),
-    warning: !isFeatureEnabled(FeatureFlag.EnableJavascriptControls)
-      ? t(
-          'This functionality is disabled in your environment for security reasons.',
-        )
-      : null,
-    readOnly: !isFeatureEnabled(FeatureFlag.EnableJavascriptControls),
+    warning: t(
+      'This functionality is disabled in your environment for security reasons.',
+    ),
+    readOnly: true,
   };
 }
 

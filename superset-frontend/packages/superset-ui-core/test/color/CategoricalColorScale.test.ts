@@ -201,9 +201,6 @@ describe('CategoricalColorScale', () => {
       expect(returnedColor).toBe(expectedColor);
     });
     test('reassigns colliding colors when no sliceId is provided', () => {
-      window.featureFlags = {
-        [FeatureFlag.AvoidColorsCollision]: true,
-      };
       const PALETTE = ['red', 'blue', 'green'];
 
       const chartAScale = new CategoricalColorScale(PALETTE);
@@ -231,10 +228,7 @@ describe('CategoricalColorScale', () => {
         labelsColorMap.source = LabelsColorMapSource.Dashboard;
       }
     });
-    test('conditionally calls getNextAvailableColor', () => {
-      window.featureFlags = {
-        [FeatureFlag.AvoidColorsCollision]: true,
-      };
+    test('always calls getNextAvailableColor for colliding colors', () => {
       scale.labelsColorMapInstance.source = LabelsColorMapSource.Explore;
 
       scale.getColor('testValue1');
@@ -247,22 +241,8 @@ describe('CategoricalColorScale', () => {
         'testValue4',
         'blue',
       );
-
-      getNextAvailableColorSpy.mockClear();
-
-      window.featureFlags = {
-        [FeatureFlag.AvoidColorsCollision]: false,
-      };
-
-      scale.getColor('testValue3');
-
-      expect(getNextAvailableColorSpy).not.toHaveBeenCalled();
     });
     test('reassigns non-forced labels when a dashboard-synced label would duplicate their color', () => {
-      window.featureFlags = {
-        [FeatureFlag.AvoidColorsCollision]: true,
-      };
-
       const dashScale = new CategoricalColorScale(['red', 'blue', 'green']);
       const sliceId = 501;
       const colorScheme = 'preset';
@@ -537,9 +517,6 @@ describe('CategoricalColorScale', () => {
     let labelsColorMap: ReturnType<typeof getLabelsColorMap>;
 
     beforeEach(() => {
-      window.featureFlags = {
-        [FeatureFlag.AvoidColorsCollision]: true,
-      };
       const sentinel = new CategoricalColorScale(['red', 'blue', 'green']);
       labelsColorMap = sentinel.labelsColorMapInstance;
       labelsColorMap.reset();
@@ -551,11 +528,7 @@ describe('CategoricalColorScale', () => {
       labelsColorMap.reset();
     });
 
-    test('reproduces the bug without the fix: Classic Cars and Trains would both be red', () => {
-      window.featureFlags = {
-        [FeatureFlag.AvoidColorsCollision]: false,
-      };
-
+    test('shared dimension labels get the same color from palette order', () => {
       const PALETTE = ['red', 'blue', 'green'];
 
       const chartAScale = new CategoricalColorScale(PALETTE);
@@ -612,7 +585,6 @@ describe('CategoricalColorScale', () => {
 
     test('fix: increments analogous color range for dashboard collisions when UseAnalogousColors is enabled', () => {
       window.featureFlags = {
-        [FeatureFlag.AvoidColorsCollision]: true,
         [FeatureFlag.UseAnalogousColors]: true,
       };
 

@@ -31,8 +31,6 @@ import { extendedDayjs } from '@superset-ui/core/utils/dates';
 import { t } from '@apache-superset/core/translation';
 import {
   Behavior,
-  isFeatureEnabled,
-  FeatureFlag,
   getChartMetadataRegistry,
   VizType,
   BinaryQueryObjectFilterClause,
@@ -542,7 +540,7 @@ const SliceHeaderControls = (
     maxWidth: `${theme.sizeUnit * 100}px`,
   });
 
-  if (isFeatureEnabled(FeatureFlag.DrillToDetail) && canDrillToDetail) {
+  if (canDrillToDetail) {
     newMenuItems.push(...drillDetailMenuItems);
   }
 
