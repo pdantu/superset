@@ -2714,6 +2714,50 @@ def test_is_valid_cvas(sql: str, engine: str, expected: bool) -> None:
         ("col1 = 1) AND (col2 = 2", QueryClauseValidationException, "base"),
         ("(col1 = 1)) AND ((col2 = 2)", QueryClauseValidationException, "base"),
         ("TRUE; SELECT 1", QueryClauseValidationException, "base"),
+        # SQL injection: subquery in WHERE clause
+        (
+            "1=1 AND (SELECT password FROM users LIMIT 1) IS NOT NULL",
+            QueryClauseValidationException,
+            "base",
+        ),
+        # SQL injection: UNION-based data extraction
+        (
+            "1=1 UNION SELECT password FROM users",
+            QueryClauseValidationException,
+            "base",
+        ),
+        # SQL injection: DML via INSERT
+        (
+            "INSERT INTO log(data) VALUES ('pwned')",
+            QueryClauseValidationException,
+            "base",
+        ),
+        # SQL injection: DML via DELETE
+        (
+            "DELETE FROM users WHERE 1=1",
+            QueryClauseValidationException,
+            "base",
+        ),
+        # SQL injection: DDL via DROP
+        (
+            "DROP TABLE users",
+            QueryClauseValidationException,
+            "base",
+        ),
+        # Valid: simple filter expressions used by dashboards
+        ("country = 'US'", "country = 'US'", "base"),
+        ("age > 21 AND status = 'active'", "age > 21 AND status = 'active'", "base"),
+        (
+            "SUM(weight * observations) / SUM(weight)",
+            "SUM(weight * observations) / SUM(weight)",
+            "base",
+        ),
+        ("COUNT(DISTINCT user_id)", "COUNT(DISTINCT user_id)", "base"),
+        (
+            "region IN ('US', 'EU', 'APAC')",
+            "region IN ('US', 'EU', 'APAC')",
+            "base",
+        ),
     ],
 )
 def test_sanitize_clause(sql: str, expected: str | Exception, engine: str) -> None:

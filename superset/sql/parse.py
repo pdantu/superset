@@ -1547,21 +1547,40 @@ def process_jinja_sql(
 
 def sanitize_clause(clause: str, engine: str) -> str:
     """
-    Make sure the SQL clause is valid.
+    Make sure the SQL clause is valid and does not contain dangerous constructs
+    such as subqueries, UNION, DML/DDL statements, or multiple statements that
+    could be used for SQL injection.
     """
     try:
         statement = SQLStatement(clause, engine)
-        dialect = SQLGLOT_DIALECTS.get(engine)
-        from sqlglot.dialects.dialect import Dialect
-
-        return Dialect.get_or_raise(dialect).generate(
-            statement._parsed,  # pylint: disable=protected-access
-            copy=True,
-            comments=True,
-            pretty=False,
-        )
     except SupersetParseError as ex:
         raise QueryClauseValidationException(f"Invalid SQL clause: {clause}") from ex
+
+    parsed = statement._parsed  # pylint: disable=protected-access
+
+    if statement.is_mutating():
+        raise QueryClauseValidationException(
+            f"Forbidden DML/DDL in SQL clause: {clause}"
+        )
+
+    if statement.has_subquery():
+        raise QueryClauseValidationException(
+            f"Subquery not allowed in SQL clause: {clause}"
+        )
+
+    if parsed.find(exp.Union):
+        raise QueryClauseValidationException(
+            f"UNION not allowed in SQL clause: {clause}"
+        )
+
+    dialect = SQLGLOT_DIALECTS.get(engine)
+
+    return Dialect.get_or_raise(dialect).generate(
+        parsed,
+        copy=True,
+        comments=True,
+        pretty=False,
+    )
 
 
 def transpile_to_dialect(
