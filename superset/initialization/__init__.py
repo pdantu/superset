@@ -37,7 +37,6 @@ from flask_compress import Compress
 from flask_session import Session
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-from superset.constants import CHANGE_ME_SECRET_KEY
 from superset.databases.utils import make_url_safe
 from superset.extensions import (
     _event_logger,
@@ -650,13 +649,9 @@ class SupersetAppInitializer:  # pylint: disable=too-many-public-methods
             )
             logger.warning(bottom_banner)
 
-        if self.config["SECRET_KEY"] == CHANGE_ME_SECRET_KEY:
-            if (
-                self.superset_app.debug
-                or self.superset_app.config["TESTING"]
-                or is_test()
-            ):
-                logger.warning("Debug mode identified with default secret key")
+        if self.config["SECRET_KEY"] == "CHANGE_ME_TO_A_COMPLEX_RANDOM_SECRET":  # noqa: S105
+            if self.superset_app.config["TESTING"] or is_test():
+                logger.warning("Test mode identified with default secret key")
                 log_default_secret_key_warning()
                 return
             log_default_secret_key_warning()

@@ -18,6 +18,7 @@
 import os
 from unittest.mock import MagicMock, patch
 
+import pytest
 from sqlalchemy.exc import OperationalError
 
 from superset.app import AppRootMiddleware, create_app, SupersetApp
@@ -157,6 +158,84 @@ class TestSupersetAppInitializer:
         assert (
             uri2 == test_uri
         )  # Should still return cached value (not "different_uri")
+
+    @patch("superset.initialization.is_test", return_value=False)
+    @patch("superset.initialization.logger")
+    def test_check_secret_key_exits_in_debug_mode_with_placeholder(
+        self, mock_logger, mock_is_test
+    ):
+        """Debug mode must NOT silently accept the placeholder secret key."""
+        mock_app = MagicMock()
+        mock_app.debug = True
+        mock_app.config = {
+            "SECRET_KEY": "CHANGE_ME_TO_A_COMPLEX_RANDOM_SECRET",
+            "TESTING": False,
+        }
+        app_initializer = SupersetAppInitializer(mock_app)
+
+        with pytest.raises(SystemExit):
+            app_initializer.check_secret_key()
+
+        mock_logger.error.assert_called_once_with(
+            "Refusing to start due to insecure SECRET_KEY"
+        )
+
+    @patch("superset.initialization.is_test", return_value=False)
+    @patch("superset.initialization.logger")
+    def test_check_secret_key_exits_in_non_debug_mode_with_placeholder(
+        self, mock_logger, mock_is_test
+    ):
+        """Non-debug mode must reject the placeholder secret key."""
+        mock_app = MagicMock()
+        mock_app.debug = False
+        mock_app.config = {
+            "SECRET_KEY": "CHANGE_ME_TO_A_COMPLEX_RANDOM_SECRET",
+            "TESTING": False,
+        }
+        app_initializer = SupersetAppInitializer(mock_app)
+
+        with pytest.raises(SystemExit):
+            app_initializer.check_secret_key()
+
+        mock_logger.error.assert_called_once_with(
+            "Refusing to start due to insecure SECRET_KEY"
+        )
+
+    @patch("superset.initialization.is_test", return_value=False)
+    @patch("superset.initialization.logger")
+    def test_check_secret_key_passes_with_valid_key(self, mock_logger, mock_is_test):
+        """A properly configured secret key should pass validation."""
+        mock_app = MagicMock()
+        mock_app.debug = False
+        mock_app.config = {
+            "SECRET_KEY": "a-sufficiently-complex-random-secret-key-here",
+            "TESTING": False,
+        }
+        app_initializer = SupersetAppInitializer(mock_app)
+
+        app_initializer.check_secret_key()
+
+        mock_logger.error.assert_not_called()
+
+    @patch("superset.initialization.is_test", return_value=True)
+    @patch("superset.initialization.logger")
+    def test_check_secret_key_allows_placeholder_in_test_mode(
+        self, mock_logger, mock_is_test
+    ):
+        """Test mode should allow the placeholder key (for test suites)."""
+        mock_app = MagicMock()
+        mock_app.debug = False
+        mock_app.config = {
+            "SECRET_KEY": "CHANGE_ME_TO_A_COMPLEX_RANDOM_SECRET",
+            "TESTING": False,
+        }
+        app_initializer = SupersetAppInitializer(mock_app)
+
+        app_initializer.check_secret_key()
+
+        mock_logger.warning.assert_any_call(
+            "Test mode identified with default secret key"
+        )
 
     def test_database_uri_doesnt_cache_fallback_values(self):
         """Test that fallback values like 'nouser' are not cached."""
