@@ -190,6 +190,57 @@ class TestSupersetAppInitializer:
         )
 
 
+class TestCheckSecretKey:
+    @patch("superset.initialization.is_test", return_value=False)
+    @patch("superset.initialization.sys")
+    @patch("superset.initialization.logger")
+    def test_default_secret_key_exits_in_non_debug_mode(
+        self, mock_logger, mock_sys, mock_is_test
+    ):
+        """Startup must abort when the placeholder SECRET_KEY is used."""
+        mock_app = MagicMock()
+        mock_app.debug = False
+        mock_app.config = {
+            "SECRET_KEY": "CHANGE_ME_TO_A_COMPLEX_RANDOM_SECRET",
+            "TESTING": False,
+        }
+        initializer = SupersetAppInitializer(mock_app)
+        initializer.check_secret_key()
+        mock_sys.exit.assert_called_once_with(1)
+
+    @patch("superset.initialization.is_test", return_value=False)
+    @patch("superset.initialization.sys")
+    @patch("superset.initialization.logger")
+    def test_default_secret_key_exits_in_debug_mode(
+        self, mock_logger, mock_sys, mock_is_test
+    ):
+        """Debug mode must NOT silently accept the placeholder key."""
+        mock_app = MagicMock()
+        mock_app.debug = True
+        mock_app.config = {
+            "SECRET_KEY": "CHANGE_ME_TO_A_COMPLEX_RANDOM_SECRET",
+            "TESTING": False,
+        }
+        initializer = SupersetAppInitializer(mock_app)
+        initializer.check_secret_key()
+        mock_sys.exit.assert_called_once_with(1)
+
+    @patch("superset.initialization.is_test", return_value=False)
+    @patch("superset.initialization.sys")
+    @patch("superset.initialization.logger")
+    def test_custom_secret_key_does_not_exit(self, mock_logger, mock_sys, mock_is_test):
+        """A proper SECRET_KEY must allow normal startup."""
+        mock_app = MagicMock()
+        mock_app.debug = False
+        mock_app.config = {
+            "SECRET_KEY": "a-real-complex-random-secret-key-here",
+            "TESTING": False,
+        }
+        initializer = SupersetAppInitializer(mock_app)
+        initializer.check_secret_key()
+        mock_sys.exit.assert_not_called()
+
+
 class TestCreateAppRoot:
     """Test app root resolution precedence in create_app."""
 
