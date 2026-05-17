@@ -122,33 +122,66 @@ test('should return a table with the given data and no title', () => {
   expect(html).toMatch(expectedHtml);
 });
 
-test('should sanitize HTML input', () => {
+test('should strip all HTML from user-controlled title and cell data', () => {
   const title = 'Title<script>alert("message");</script>';
   const data = [
     ['<b onclick="alert(\'message\')">B message</b>', 'message2'],
     ['<img src="x" onerror="alert(\'message\');" />', '<i>Italic</i>'],
   ];
 
-  const html = removeWhitespaces(tooltipHtml(data, title));
+  const html = tooltipHtml(data, title);
 
-  const expectedHtml = removeWhitespaces(
-    sanitizeHtml(`
-    <div>
-        <span ${TITLE_STYLE}>Titlealert("message");</span>
-        <table>
-            <tr ${TR_STYLE}>
-                <td ${TD_TEXT_STYLE}><b>B message</b></td>
-                <td ${TD_NUMBER_STYLE}>message2</td>
-            </tr>
-            <tr ${TR_STYLE}>
-                <td ${TD_TEXT_STYLE}><img src="x" /></td>
-                <td ${TD_NUMBER_STYLE}><i>Italic</i></td>
-            </tr>
-        </table>
-    </div>`),
-  );
+  expect(html).not.toContain('<script>');
+  expect(html).not.toContain('onerror');
+  expect(html).not.toContain('onclick');
+  expect(html).not.toContain('<img');
+  expect(html).not.toContain('<b ');
+  expect(html).toContain('B message');
+  expect(html).toContain('message2');
+  expect(html).toContain('Italic');
+});
 
-  expect(html).toMatch(expectedHtml);
+test('should block XSS payloads in column label tooltips (CVE-2025-55672)', () => {
+  const xssPayloads = [
+    '<img src=x onerror=alert(document.cookie)>',
+    '<svg onload=alert(1)>',
+    '<a href="javascript:alert(1)">click</a>',
+    '<div onmouseover="alert(1)">hover</div>',
+    '"><script>alert(1)</script>',
+  ];
+
+  xssPayloads.forEach(payload => {
+    const html = tooltipHtml([[payload, '100']], payload);
+    expect(html).not.toContain('onerror');
+    expect(html).not.toContain('onload');
+    expect(html).not.toContain('onmouseover');
+    expect(html).not.toContain('javascript:');
+    expect(html).not.toContain('<script>');
+    expect(html).not.toContain('<img');
+    expect(html).not.toContain('<svg');
+  });
+});
+
+test('should render legitimate labels with special characters and unicode correctly', () => {
+  const specialLabels = [
+    ['Revenue ($)', '1,234'],
+    ['Profit & Loss', '567'],
+    ['Column <50%', '89'],
+    ['M\u00e9trique', '42'],
+    ['\u2603 Snowman', '100'],
+    ['Price (\u00a3/\u20ac)', '99'],
+  ];
+
+  const html = tooltipHtml(specialLabels, 'Test & Title <>');
+
+  expect(html).toContain('Revenue ($)');
+  expect(html).toContain('Profit');
+  expect(html).toContain('Loss');
+  expect(html).toContain('M\u00e9trique');
+  expect(html).toContain('\u2603 Snowman');
+  expect(html).toContain('Price');
+  expect(html).toContain('Test');
+  expect(html).toContain('Title');
 });
 
 test('should preserve table styling after sanitization (fixes ECharts tooltip formatting)', () => {
@@ -178,4 +211,7 @@ test('should preserve table styling after sanitization (fixes ECharts tooltip fo
   expect(html).toContain('padding-left: 0px');
   expect(html).toContain('padding-left: 16px');
   expect(html).toContain('max-width: 300px');
+  expect(html).toContain('Metric');
+  expect(html).toContain('Sales');
+  expect(html).toContain('$1,234');
 });

@@ -16,8 +16,13 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+import DOMPurify from 'dompurify';
 import { t } from '@apache-superset/core/translation';
 import { sanitizeHtml } from './html';
+
+function escapeUserContent(value: string): string {
+  return DOMPurify.sanitize(value, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
+}
 
 const TRUNCATION_STYLE = `
   max-width: 300px;
@@ -30,8 +35,9 @@ export function tooltipHtml(
   title?: string,
   focusedRow?: number,
 ) {
-  const titleRow = title
-    ? `<span style="font-weight: 700;${TRUNCATION_STYLE}">${title}</span>`
+  const safeTitle = title ? escapeUserContent(title) : undefined;
+  const titleRow = safeTitle
+    ? `<span style="font-weight: 700;${TRUNCATION_STYLE}">${safeTitle}</span>`
     : '';
   return sanitizeHtml(`
     <div>
@@ -48,7 +54,7 @@ export function tooltipHtml(
                   padding-left: ${j === 0 ? 0 : 16}px;
                   ${TRUNCATION_STYLE}
                 `;
-                return `<td style="${cellStyle}">${cell}</td>`;
+                return `<td style="${cellStyle}">${escapeUserContent(cell)}</td>`;
               });
               return `<tr style="${rowStyle}">${cells.join('')}</tr>`;
             })
