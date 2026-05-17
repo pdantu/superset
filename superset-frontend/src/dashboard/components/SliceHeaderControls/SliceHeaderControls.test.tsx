@@ -377,20 +377,7 @@ test('Should sync local state after exiting fullscreen', async () => {
   (document as any).exitFullscreen = originalExitFullscreen;
 });
 
-test('Drill to detail modal is under featureflag', () => {
-  (global as any).featureFlags = {
-    [FeatureFlag.DrillToDetail]: false,
-  };
-  const props = createProps();
-  renderWrapper(props);
-  openMenu();
-  expect(screen.queryByText('Drill to detail')).not.toBeInTheDocument();
-});
-
 test('Should show "Drill to detail" with `can_explore`, `can_samples` & `can_get_drill_info` perms', () => {
-  (global as any).featureFlags = {
-    [FeatureFlag.DrillToDetail]: true,
-  };
   const props = createProps();
   props.slice.slice_id = 18;
   renderWrapper(props, {
@@ -405,9 +392,6 @@ test('Should show "Drill to detail" with `can_explore`, `can_samples` & `can_get
 });
 
 test('Should show "Drill to detail" with `can_drill` & `can_samples` & `can_get_drill_info` perms', () => {
-  (global as any).featureFlags = {
-    [FeatureFlag.DrillToDetail]: true,
-  };
   const props = {
     ...createProps(),
     supersetCanExplore: false,
@@ -425,9 +409,6 @@ test('Should show "Drill to detail" with `can_drill` & `can_samples` & `can_get_
 });
 
 test('Should show "Drill to detail" with both `canexplore` + `can_drill` & `can_samples` & `can_get_drill_info` perms', () => {
-  (global as any).featureFlags = {
-    [FeatureFlag.DrillToDetail]: true,
-  };
   const props = {
     ...createProps(),
     supersetCanExplore: true,
@@ -446,9 +427,6 @@ test('Should show "Drill to detail" with both `canexplore` + `can_drill` & `can_
 });
 
 test('Should not show "Drill to detail" with neither of required perms', () => {
-  (global as any).featureFlags = {
-    [FeatureFlag.DrillToDetail]: true,
-  };
   const props = {
     ...createProps(),
     supersetCanExplore: false,
@@ -462,9 +440,6 @@ test('Should not show "Drill to detail" with neither of required perms', () => {
 });
 
 test('Should not show "Drill to detail" only `can_drill` perm', () => {
-  (global as any).featureFlags = {
-    [FeatureFlag.DrillToDetail]: true,
-  };
   const props = {
     ...createProps(),
     supersetCanExplore: false,
@@ -478,9 +453,6 @@ test('Should not show "Drill to detail" only `can_drill` perm', () => {
 });
 
 test('Should not show "Drill to detail" with only `can_drill` & `can_samples` perms', () => {
-  (global as any).featureFlags = {
-    [FeatureFlag.DrillToDetail]: true,
-  };
   const props = {
     ...createProps(),
     supersetCanExplore: false,
@@ -497,9 +469,6 @@ test('Should not show "Drill to detail" with only `can_drill` & `can_samples` pe
 });
 
 test('Should not show "Drill to detail" with only `can_explore` & `can_samples` perms', () => {
-  (global as any).featureFlags = {
-    [FeatureFlag.DrillToDetail]: true,
-  };
   const props = {
     ...createProps(),
     supersetCanExplore: false,
@@ -516,9 +485,6 @@ test('Should not show "Drill to detail" with only `can_explore` & `can_samples` 
 });
 
 test('Should not show "Drill to detail" with only `can_explore`, `can_drill` & `can_samples` perms', () => {
-  (global as any).featureFlags = {
-    [FeatureFlag.DrillToDetail]: true,
-  };
   const props = {
     ...createProps(),
     supersetCanExplore: false,
@@ -605,9 +571,6 @@ test('Should not show the "Edit chart" button', () => {
 });
 
 test('Dataset drill info API call is made when user has drill permissions', async () => {
-  (global as any).featureFlags = {
-    [FeatureFlag.DrillToDetail]: true,
-  };
   renderWrapper(undefined, {
     Admin: [
       ['can_samples', 'Datasource'],
@@ -626,9 +589,6 @@ test('Dataset drill info API call is made when user has drill permissions', asyn
 });
 
 test('Dataset drill info API call is not made when user lacks drill permissions', async () => {
-  (global as any).featureFlags = {
-    [FeatureFlag.DrillToDetail]: true,
-  };
   renderWrapper(undefined, {
     Admin: [['invalid_permission', 'Dashboard']],
   });

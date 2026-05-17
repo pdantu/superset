@@ -394,25 +394,6 @@
         "category": "runtime_config"
       }
     ],
-    "deprecated": [
-      {
-        "name": "AVOID_COLORS_COLLISION",
-        "default": true,
-        "lifecycle": "deprecated",
-        "description": "Avoid color collisions in charts by using distinct colors"
-      },
-      {
-        "name": "DRILL_TO_DETAIL",
-        "default": true,
-        "lifecycle": "deprecated",
-        "description": "Enable drill-to-detail functionality in charts"
-      },
-      {
-        "name": "ENABLE_JAVASCRIPT_CONTROLS",
-        "default": false,
-        "lifecycle": "deprecated",
-        "description": "Allow JavaScript in chart controls. WARNING: XSS security vulnerability!"
-      }
-    ]
+    "deprecated": []
   }
 }

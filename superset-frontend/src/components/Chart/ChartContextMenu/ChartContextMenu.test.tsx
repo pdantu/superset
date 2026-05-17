@@ -93,7 +93,6 @@ const setup = () =>
 beforeEach(() => {
   // @ts-ignore
   global.featureFlags = {
-    [FeatureFlag.DrillToDetail]: true,
     [FeatureFlag.DrillBy]: true,
   };
 

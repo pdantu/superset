@@ -23,8 +23,6 @@ import {
   Behavior,
   getChartMetadataRegistry,
   VizType,
-  isFeatureEnabled,
-  FeatureFlag,
   QueryFormData,
   AnnotationData,
   DataMask,
@@ -204,9 +202,7 @@ class ChartRenderer extends Component<ChartRendererProps, ChartRendererState> {
     )?.suppressContextMenu;
     this.state = {
       showContextMenu:
-        props.source === ChartSource.Dashboard &&
-        !suppressContextMenu &&
-        isFeatureEnabled(FeatureFlag.DrillToDetail),
+        props.source === ChartSource.Dashboard && !suppressContextMenu,
       inContextMenu: false,
       legendState: undefined,
       legendIndex: 0,

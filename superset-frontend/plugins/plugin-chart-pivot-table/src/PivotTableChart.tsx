@@ -29,13 +29,11 @@ import {
   Currency,
   CurrencyFormatter,
   DataRecordValue,
-  FeatureFlag,
   getColumnLabel,
   getNumberFormatter,
   getSelectedText,
   hasMixedCurrencies,
   isAdhocColumn,
-  isFeatureEnabled,
   isPhysicalColumn,
   normalizeCurrency,
   NumberFormatter,
@@ -584,10 +582,7 @@ export default function PivotTableChart(props: PivotTableProps) {
       colSubTotals,
       rowTotals,
       rowSubTotals,
-      highlightHeaderCellsOnHover:
-        emitCrossFilters ||
-        isFeatureEnabled(FeatureFlag.DrillBy) ||
-        isFeatureEnabled(FeatureFlag.DrillToDetail),
+      highlightHeaderCellsOnHover: true,
       highlightedHeaderCells: selectedFilters,
       omittedHighlightHeaderGroups: [METRIC_KEY],
       cellColorFormatters: { [METRIC_KEY]: metricColorFormatters },
