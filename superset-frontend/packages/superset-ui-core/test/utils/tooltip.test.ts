@@ -167,9 +167,9 @@ test('should render legitimate labels with special characters and unicode correc
     ['Revenue ($)', '1,234'],
     ['Profit & Loss', '567'],
     ['Column <50%', '89'],
-    ['M\u00e9trique', '42'],
+    ['M\u00E9trique', '42'],
     ['\u2603 Snowman', '100'],
-    ['Price (\u00a3/\u20ac)', '99'],
+    ['Price (\u00A3/\u20AC)', '99'],
   ];
 
   const html = tooltipHtml(specialLabels, 'Test & Title <>');
@@ -177,7 +177,7 @@ test('should render legitimate labels with special characters and unicode correc
   expect(html).toContain('Revenue ($)');
   expect(html).toContain('Profit');
   expect(html).toContain('Loss');
-  expect(html).toContain('M\u00e9trique');
+  expect(html).toContain('M\u00E9trique');
   expect(html).toContain('\u2603 Snowman');
   expect(html).toContain('Price');
   expect(html).toContain('Test');
