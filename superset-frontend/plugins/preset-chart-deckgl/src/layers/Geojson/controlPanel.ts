@@ -18,11 +18,7 @@
  */
 import { ControlPanelConfig } from '@superset-ui/chart-controls';
 import { t } from '@apache-superset/core/translation';
-import {
-  legacyValidateInteger,
-  isFeatureEnabled,
-  FeatureFlag,
-} from '@superset-ui/core';
+import { legacyValidateInteger } from '@superset-ui/core';
 import { formatSelectOptions } from '../../utilities/utils';
 import {
   filterNulls,
@@ -115,9 +111,7 @@ const config: ControlPanelConfig = {
               description: t(
                 'Enables custom label configuration via JavaScript',
               ),
-              visibility: ({ form_data }) =>
-                !!form_data.enable_labels &&
-                isFeatureEnabled(FeatureFlag.EnableJavascriptControls),
+              visibility: () => false,
               default: false,
               renderTrigger: true,
               resetOnHide: false,
@@ -131,10 +125,7 @@ const config: ControlPanelConfig = {
               type: 'TextControl',
               label: t('Label property name'),
               description: t('The feature property to use for point labels'),
-              visibility: ({ form_data }) =>
-                !!form_data.enable_labels &&
-                (!form_data.enable_label_javascript_mode ||
-                  !isFeatureEnabled(FeatureFlag.EnableJavascriptControls)),
+              visibility: ({ form_data }) => !!form_data.enable_labels,
               default: 'name',
               renderTrigger: true,
               resetOnHide: false,
@@ -148,10 +139,7 @@ const config: ControlPanelConfig = {
               type: 'ColorPickerControl',
               label: t('Label color'),
               description: t('The color of the point labels'),
-              visibility: ({ form_data }) =>
-                !!form_data.enable_labels &&
-                (!form_data.enable_label_javascript_mode ||
-                  !isFeatureEnabled(FeatureFlag.EnableJavascriptControls)),
+              visibility: ({ form_data }) => !!form_data.enable_labels,
               default: BLACK_COLOR,
               renderTrigger: true,
               resetOnHide: false,
@@ -166,10 +154,7 @@ const config: ControlPanelConfig = {
               freeForm: true,
               label: t('Label size'),
               description: t('The font size of the point labels'),
-              visibility: ({ form_data }) =>
-                !!form_data.enable_labels &&
-                (!form_data.enable_label_javascript_mode ||
-                  !isFeatureEnabled(FeatureFlag.EnableJavascriptControls)),
+              visibility: ({ form_data }) => !!form_data.enable_labels,
               validators: [legacyValidateInteger],
               choices: formatSelectOptions([8, 16, 24, 32, 64, 128]),
               default: 24,
@@ -185,10 +170,7 @@ const config: ControlPanelConfig = {
               type: 'SelectControl',
               label: t('Label size unit'),
               description: t('The unit for label size'),
-              visibility: ({ form_data }) =>
-                !!form_data.enable_labels &&
-                (!form_data.enable_label_javascript_mode ||
-                  !isFeatureEnabled(FeatureFlag.EnableJavascriptControls)),
+              visibility: ({ form_data }) => !!form_data.enable_labels,
               choices: [
                 ['meters', t('Meters')],
                 ['pixels', t('Pixels')],
@@ -212,10 +194,7 @@ const config: ControlPanelConfig = {
                 undefined,
                 defaultLabelConfigGenerator,
               ),
-              visibility: ({ form_data }) =>
-                !!form_data.enable_labels &&
-                !!form_data.enable_label_javascript_mode &&
-                isFeatureEnabled(FeatureFlag.EnableJavascriptControls),
+              visibility: () => false,
               resetOnHide: false,
             },
           },
@@ -241,9 +220,7 @@ const config: ControlPanelConfig = {
               description: t(
                 'Enables custom icon configuration via JavaScript',
               ),
-              visibility: ({ form_data }) =>
-                !!form_data.enable_icons &&
-                isFeatureEnabled(FeatureFlag.EnableJavascriptControls),
+              visibility: () => false,
               default: false,
               renderTrigger: true,
               resetOnHide: false,
@@ -261,10 +238,7 @@ const config: ControlPanelConfig = {
                   'Note that the image URL must conform to the content ' +
                   'security policy (CSP) in order to load correctly.',
               ),
-              visibility: ({ form_data }) =>
-                !!form_data.enable_icons &&
-                (!form_data.enable_icon_javascript_mode ||
-                  !isFeatureEnabled(FeatureFlag.EnableJavascriptControls)),
+              visibility: ({ form_data }) => !!form_data.enable_icons,
               default: '',
               renderTrigger: true,
               resetOnHide: false,
@@ -279,10 +253,7 @@ const config: ControlPanelConfig = {
               freeForm: true,
               label: t('Icon size'),
               description: t('The size of the point icons'),
-              visibility: ({ form_data }) =>
-                !!form_data.enable_icons &&
-                (!form_data.enable_icon_javascript_mode ||
-                  !isFeatureEnabled(FeatureFlag.EnableJavascriptControls)),
+              visibility: ({ form_data }) => !!form_data.enable_icons,
               validators: [legacyValidateInteger],
               choices: formatSelectOptions([16, 24, 32, 64, 128]),
               default: 32,
@@ -298,10 +269,7 @@ const config: ControlPanelConfig = {
               type: 'SelectControl',
               label: t('Icon size unit'),
               description: t('The unit for icon size'),
-              visibility: ({ form_data }) =>
-                !!form_data.enable_icons &&
-                (!form_data.enable_icon_javascript_mode ||
-                  !isFeatureEnabled(FeatureFlag.EnableJavascriptControls)),
+              visibility: ({ form_data }) => !!form_data.enable_icons,
               choices: [
                 ['meters', t('Meters')],
                 ['pixels', t('Pixels')],
@@ -325,10 +293,7 @@ const config: ControlPanelConfig = {
                 undefined,
                 defaultIconConfigGenerator,
               ),
-              visibility: ({ form_data }) =>
-                !!form_data.enable_icons &&
-                !!form_data.enable_icon_javascript_mode &&
-                isFeatureEnabled(FeatureFlag.EnableJavascriptControls),
+              visibility: () => false,
               resetOnHide: false,
             },
           },

@@ -542,7 +542,7 @@ const SliceHeaderControls = (
     maxWidth: `${theme.sizeUnit * 100}px`,
   });
 
-  if (isFeatureEnabled(FeatureFlag.DrillToDetail) && canDrillToDetail) {
+  if (canDrillToDetail) {
     newMenuItems.push(...drillDetailMenuItems);
   }
 

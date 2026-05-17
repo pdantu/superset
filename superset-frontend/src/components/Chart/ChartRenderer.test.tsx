@@ -103,7 +103,7 @@ declare global {
 }
 
 beforeAll(() => {
-  window.featureFlags = { DRILL_TO_DETAIL: true } as FeatureFlagMap;
+  window.featureFlags = {} as FeatureFlagMap;
 });
 afterAll(() => {
   window.featureFlags = {} as FeatureFlagMap;

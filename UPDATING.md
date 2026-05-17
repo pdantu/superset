@@ -24,6 +24,16 @@ assists people when migrating to a new version.
 
 ## Next
 
+### Removed deprecated feature flags
+
+The following deprecated feature flags have been removed:
+
+- **`AVOID_COLORS_COLLISION`** (previously `True`): Color collision avoidance in charts is now standard behavior and cannot be disabled.
+- **`DRILL_TO_DETAIL`** (previously `True`): Drill-to-detail functionality is now always enabled and cannot be disabled.
+- **`ENABLE_JAVASCRIPT_CONTROLS`** (previously `False`): JavaScript controls in charts remain disabled for security (XSS prevention) and can no longer be re-enabled via feature flag.
+
+If your `superset_config.py` references any of these flags in `FEATURE_FLAGS`, remove them to avoid confusion.
+
 ### Granular Export Controls
 
 A new feature flag `GRANULAR_EXPORT_CONTROLS` introduces three fine-grained permissions that replace the legacy `can_csv` permission:
