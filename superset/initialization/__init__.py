@@ -659,6 +659,27 @@ class SupersetAppInitializer:  # pylint: disable=too-many-public-methods
             logger.error("Refusing to start due to insecure SECRET_KEY")
             sys.exit(1)
 
+    _INSECURE_JWT_PLACEHOLDERS = {
+        "test-secret-change-me",
+        "test-guest-secret-change-me",
+    }
+
+    def check_jwt_secrets(self) -> None:
+        """Refuse to start when JWT secrets are missing or still placeholders."""
+        for key, env_var in (
+            (
+                "GLOBAL_ASYNC_QUERIES_JWT_SECRET",
+                "SUPERSET_GLOBAL_ASYNC_QUERIES_JWT_SECRET",
+            ),
+            ("GUEST_TOKEN_JWT_SECRET", "SUPERSET_GUEST_TOKEN_JWT_SECRET"),
+        ):
+            value = self.config.get(key, "")
+            if not value or value in self._INSECURE_JWT_PLACEHOLDERS:
+                raise RuntimeError(
+                    f"{key} is not configured. Set the {env_var} environment "
+                    f"variable to a secure random string before starting Superset."
+                )
+
     def configure_session(self) -> None:
         if self.config["SESSION_SERVER_SIDE"]:
             Session(self.superset_app)
@@ -737,6 +758,7 @@ class SupersetAppInitializer:  # pylint: disable=too-many-public-methods
         """
         self.pre_init()
         self.check_secret_key()
+        self.check_jwt_secrets()
         self.configure_session()
         # Configuration of logging must be done first to apply the formatter properly
         self.configure_logging()

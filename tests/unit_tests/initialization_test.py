@@ -241,6 +241,71 @@ class TestCheckSecretKey:
         mock_sys.exit.assert_not_called()
 
 
+class TestCheckJwtSecrets:
+    def test_raises_when_global_async_jwt_secret_empty(self):
+        """Startup fails when GLOBAL_ASYNC_QUERIES_JWT_SECRET is empty."""
+        mock_app = MagicMock()
+        mock_app.config = {
+            "GLOBAL_ASYNC_QUERIES_JWT_SECRET": "",
+            "GUEST_TOKEN_JWT_SECRET": "a-valid-secret-for-testing-purposes",
+        }
+        app_initializer = SupersetAppInitializer(mock_app)
+        import pytest
+
+        with pytest.raises(RuntimeError, match="GLOBAL_ASYNC_QUERIES_JWT_SECRET"):
+            app_initializer.check_jwt_secrets()
+
+    def test_raises_when_guest_token_jwt_secret_empty(self):
+        """Startup fails when GUEST_TOKEN_JWT_SECRET is empty."""
+        mock_app = MagicMock()
+        mock_app.config = {
+            "GLOBAL_ASYNC_QUERIES_JWT_SECRET": "a-valid-secret-for-testing-purposes",
+            "GUEST_TOKEN_JWT_SECRET": "",
+        }
+        app_initializer = SupersetAppInitializer(mock_app)
+        import pytest
+
+        with pytest.raises(RuntimeError, match="GUEST_TOKEN_JWT_SECRET"):
+            app_initializer.check_jwt_secrets()
+
+    def test_raises_when_global_async_jwt_secret_is_placeholder(self):
+        """Startup fails when GLOBAL_ASYNC_QUERIES_JWT_SECRET is the old placeholder."""
+        mock_app = MagicMock()
+        mock_app.config = {
+            "GLOBAL_ASYNC_QUERIES_JWT_SECRET": "test-secret-change-me",
+            "GUEST_TOKEN_JWT_SECRET": "a-valid-secret-for-testing-purposes",
+        }
+        app_initializer = SupersetAppInitializer(mock_app)
+        import pytest
+
+        with pytest.raises(RuntimeError, match="GLOBAL_ASYNC_QUERIES_JWT_SECRET"):
+            app_initializer.check_jwt_secrets()
+
+    def test_raises_when_guest_token_jwt_secret_is_placeholder(self):
+        """Startup fails when GUEST_TOKEN_JWT_SECRET is the old placeholder."""
+        mock_app = MagicMock()
+        mock_app.config = {
+            "GLOBAL_ASYNC_QUERIES_JWT_SECRET": "a-valid-secret-for-testing-purposes",
+            "GUEST_TOKEN_JWT_SECRET": "test-guest-secret-change-me",
+        }
+        app_initializer = SupersetAppInitializer(mock_app)
+        import pytest
+
+        with pytest.raises(RuntimeError, match="GUEST_TOKEN_JWT_SECRET"):
+            app_initializer.check_jwt_secrets()
+
+    def test_passes_when_both_secrets_are_valid(self):
+        """Startup succeeds when both JWT secrets are properly configured."""
+        mock_app = MagicMock()
+        mock_app.config = {
+            "GLOBAL_ASYNC_QUERIES_JWT_SECRET": "my-secure-async-secret-value",
+            "GUEST_TOKEN_JWT_SECRET": "my-secure-guest-secret-value",
+        }
+        app_initializer = SupersetAppInitializer(mock_app)
+        # Should not raise
+        app_initializer.check_jwt_secrets()
+
+
 class TestCreateAppRoot:
     """Test app root resolution precedence in create_app."""
 
