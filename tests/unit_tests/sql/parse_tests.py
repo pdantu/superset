@@ -2959,6 +2959,14 @@ FROM query_to_xml('SELECT * from some_table WHERE id = 42')
             True,
         ),
         ("Table | limit 10", "kustokql", False),
+        # CVE-2025-55674: inline comment adjacent to blocked function
+        ("SELECT /* bypass */ version()", "postgresql", True),
+        ("SELECT version /* comment */ ()", "postgresql", True),
+        ("SELECT /**/version()", "postgresql", True),
+        ("SELECT version/**/()", "postgresql", True),
+        # CVE-2025-55674: function name only in comment, no actual call
+        ("SELECT 1 /* version is blocked */", "postgresql", False),
+        ("SELECT /* version() */ 1", "postgresql", False),
     ],
 )
 def test_check_functions_present(sql: str, engine: str, expected: bool) -> None:

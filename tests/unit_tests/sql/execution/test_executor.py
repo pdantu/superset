@@ -350,6 +350,57 @@ def test_execute_allowed_functions(
     assert result.status == QueryStatus.SUCCESS
 
 
+def test_execute_disallowed_functions_with_comment_adjacency(
+    mocker: MockerFixture, database: Database, app_context: None
+) -> None:
+    """Test that disallowed functions are caught even with adjacent comments.
+
+    Regression test for CVE-2025-55674: inline comment injection must not
+    bypass the DISALLOWED_SQL_FUNCTIONS blocklist.
+    """
+    mocker.patch.dict(
+        current_app.config,
+        {
+            "SQL_QUERY_MUTATOR": None,
+            "SQLLAB_TIMEOUT": 30,
+            "DISALLOWED_SQL_FUNCTIONS": {"sqlite": {"version"}},
+        },
+    )
+
+    # Comments adjacent to the function call must still be caught
+    result = database.execute("SELECT /* bypass */ version()")
+
+    assert result.status == QueryStatus.FAILED
+    assert result.error_message is not None
+    assert "Disallowed SQL functions" in result.error_message
+
+
+def test_execute_disallowed_functions_no_false_positive_from_comments(
+    mocker: MockerFixture, database: Database, app_context: None
+) -> None:
+    """Test that comments mentioning a blocked function name do not trigger a block.
+
+    Regression test for CVE-2025-55674: the AST-based check must not flag
+    function names that only appear inside SQL comments.
+    """
+    mock_query_execution(mocker, database, return_data=[(1,)], column_names=["val"])
+    mocker.patch.dict(
+        current_app.config,
+        {
+            "SQL_QUERY_MUTATOR": None,
+            "SQLLAB_TIMEOUT": 30,
+            "SQL_MAX_ROW": None,
+            "DISALLOWED_SQL_FUNCTIONS": {"sqlite": {"version"}},
+            "QUERY_LOGGER": None,
+        },
+    )
+
+    # The word "version" only appears in a comment, not as a function call
+    result = database.execute("SELECT 1 /* version is blocked */")
+
+    assert result.status == QueryStatus.SUCCESS
+
+
 def test_execute_disallowed_tables(
     mocker: MockerFixture, database: Database, app_context: None
 ) -> None:

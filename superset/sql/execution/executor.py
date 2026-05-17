@@ -680,6 +680,11 @@ class SQLExecutor:
         """
         Check for disallowed SQL functions.
 
+        Uses the AST-based check_functions_present() method which inspects
+        parsed function nodes rather than raw strings. This prevents bypasses
+        via inline SQL comments or other obfuscation techniques
+        (CVE-2025-55674).
+
         :param script: Parsed SQL script
         :returns: Set of disallowed functions found, or None if none found
         """
@@ -691,14 +696,12 @@ class SQLExecutor:
         if not engine_disallowed:
             return None
 
-        # Check each statement for disallowed functions
+        # Use AST-based detection: check each disallowed function individually
+        # to report exactly which ones were found
         found = set()
-        for statement in script.statements:
-            # Use the statement's AST to check for function calls
-            statement_str = str(statement).upper()
-            for func in engine_disallowed:
-                if func.upper() in statement_str:
-                    found.add(func)
+        for func in engine_disallowed:
+            if script.check_functions_present({func}):
+                found.add(func)
 
         return found if found else None
 
