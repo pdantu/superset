@@ -16,6 +16,7 @@
 # under the License.
 
 import logging
+import threading
 import time
 from collections import defaultdict
 from typing import Any, Awaitable, Callable, Dict, Protocol, Sequence
@@ -553,13 +554,35 @@ class RateLimiterProtocol(Protocol):
 
 
 class InMemoryRateLimiter:
-    """In-memory rate limiter for development."""
+    """In-memory rate limiter with proactive background cleanup.
+
+    Runs a daemon thread that periodically evicts stale entries so memory
+    stays bounded even under sustained high traffic.  A hard cap on total
+    tracked entries guarantees worst-case memory usage.
+    """
+
+    _CLEANUP_INTERVAL_SECS = 300  # background sweep every 5 minutes
+    _SIZE_THRESHOLD = 10_000  # warn + aggressive cleanup trigger
+    _HARD_CAP = 50_000  # absolute upper bound on tracked entries
+    _MAX_ENTRIES_PER_KEY = 100  # per-key cap during aggressive cleanup
+    _ENTRY_TTL_SECS = 3600  # 1 hour
 
     def __init__(self) -> None:
-        # Structure: {key: [(timestamp, count), ...]}
         self._requests: Dict[str, list[tuple[float, int]]] = defaultdict(list)
-        self._cleanup_interval = 300  # Clean up every 5 minutes
+        self._lock = threading.Lock()
         self._last_cleanup = time.time()
+
+        self._shutdown_event = threading.Event()
+        self._cleanup_thread = threading.Thread(
+            target=self._background_cleanup_loop,
+            daemon=True,
+            name="rate-limiter-cleanup",
+        )
+        self._cleanup_thread.start()
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
 
     def is_rate_limited(
         self, key: str, limit: int, window: int = 60
@@ -568,93 +591,145 @@ class InMemoryRateLimiter:
         current_time = time.time()
         window_start = current_time - window
 
-        # Get requests in the current window
-        requests_in_window = [
-            (timestamp, count)
-            for timestamp, count in self._requests[key]
-            if timestamp > window_start
-        ]
+        with self._lock:
+            requests_in_window = [
+                (timestamp, count)
+                for timestamp, count in self._requests[key]
+                if timestamp > window_start
+            ]
 
-        # Calculate total requests in window
-        total_requests = sum(count for _, count in requests_in_window)
+            total_requests = sum(count for _, count in requests_in_window)
 
-        # Check if rate limited BEFORE adding the current request
-        if total_requests >= limit:
-            # Rate limit info when limited
+            if total_requests >= limit:
+                rate_limit_info = {
+                    "limit": limit,
+                    "remaining": 0,
+                    "reset_time": int(window_start + window),
+                    "window_seconds": window,
+                }
+                return True, rate_limit_info
+
+            self._requests[key].append((current_time, 1))
+            total_requests += 1
+
+            # Inline prune: keep last hour only
+            self._requests[key] = [
+                (ts, count)
+                for ts, count in self._requests[key]
+                if ts > current_time - self._ENTRY_TTL_SECS
+            ]
+
             rate_limit_info = {
                 "limit": limit,
-                "remaining": 0,
+                "remaining": max(0, limit - total_requests),
                 "reset_time": int(window_start + window),
                 "window_seconds": window,
             }
-            return True, rate_limit_info
-
-        # Add current request to tracking
-        self._requests[key].append((current_time, 1))
-
-        # Update total after adding
-        total_requests += 1
-
-        # Keep only recent entries
-        self._requests[key] = [
-            (ts, count)
-            for ts, count in self._requests[key]
-            if ts > current_time - 3600  # Keep last hour
-        ]
-
-        # Rate limit info after adding request
-        rate_limit_info = {
-            "limit": limit,
-            "remaining": max(0, limit - total_requests),
-            "reset_time": int(window_start + window),
-            "window_seconds": window,
-        }
 
         return False, rate_limit_info
 
     def cleanup(self) -> None:
-        """Remove entries older than 1 hour to prevent memory leaks."""
+        """Run cleanup synchronously (also called by the background thread)."""
         current_time = time.time()
 
-        # SECURITY FIX: Check both time-based and size-based cleanup conditions
-        total_entries = sum(len(requests) for requests in self._requests.values())
-        size_threshold = 10000  # Maximum entries before forced cleanup
+        with self._lock:
+            total_entries = self._total_entries()
 
-        time_based_cleanup = current_time - self._last_cleanup >= self._cleanup_interval
-        size_based_cleanup = total_entries > size_threshold
+            time_based = (
+                current_time - self._last_cleanup >= self._CLEANUP_INTERVAL_SECS
+            )
+            size_based = total_entries > self._SIZE_THRESHOLD
+            hard_cap_hit = total_entries > self._HARD_CAP
 
-        if not (time_based_cleanup or size_based_cleanup):
-            return
+            if not (time_based or size_based or hard_cap_hit):
+                return
 
-        cutoff_time = current_time - 3600  # 1 hour ago
-        keys_to_clean = []
+            self._evict_expired(current_time)
+            self._enforce_size_threshold()
+            self._enforce_hard_cap()
+            self._last_cleanup = current_time
+
+    # ------------------------------------------------------------------
+    # Cleanup helpers (must be called while holding self._lock)
+    # ------------------------------------------------------------------
+
+    def _total_entries(self) -> int:
+        return sum(len(requests) for requests in self._requests.values())
+
+    def _evict_expired(self, current_time: float) -> None:
+        """Remove entries older than the TTL and drop empty keys."""
+        cutoff_time = current_time - self._ENTRY_TTL_SECS
+        keys_to_remove: list[str] = []
 
         for key, requests in self._requests.items():
-            # Remove old entries
             self._requests[key] = [
                 (timestamp, count)
                 for timestamp, count in requests
                 if timestamp > cutoff_time
             ]
-            # Mark empty keys for removal
             if not self._requests[key]:
-                keys_to_clean.append(key)
+                keys_to_remove.append(key)
 
-        for key in keys_to_clean:
+        for key in keys_to_remove:
             del self._requests[key]
 
-        # SECURITY FIX: If still too many entries, implement aggressive cleanup
-        if total_entries > size_threshold:
-            logger.warning(
-                "Rate limiter memory high (%d entries), performing aggressive cleanup",
-                total_entries,
-            )
-            # Keep only the most recent entries per key
-            for key in list(self._requests.keys()):
-                if len(self._requests[key]) > 100:  # Keep max 100 entries per key
-                    self._requests[key] = self._requests[key][-100:]
+    def _enforce_size_threshold(self) -> None:
+        """Trim per-key entries when the total exceeds the size threshold."""
+        total_entries = self._total_entries()
+        if total_entries <= self._SIZE_THRESHOLD:
+            return
 
-        self._last_cleanup = current_time
+        logger.warning(
+            "Rate limiter cleanup: size threshold exceeded "
+            "(%d entries > %d threshold), performing aggressive cleanup",
+            total_entries,
+            self._SIZE_THRESHOLD,
+        )
+        for key in list(self._requests.keys()):
+            if len(self._requests[key]) > self._MAX_ENTRIES_PER_KEY:
+                self._requests[key] = self._requests[key][-self._MAX_ENTRIES_PER_KEY :]
+
+    def _enforce_hard_cap(self) -> None:
+        """Drop oldest keys until total entries are within the hard cap."""
+        total_entries = self._total_entries()
+        if total_entries <= self._HARD_CAP:
+            return
+
+        logger.warning(
+            "Rate limiter cleanup: hard cap exceeded "
+            "(%d entries > %d cap), evicting oldest keys",
+            total_entries,
+            self._HARD_CAP,
+        )
+        sorted_keys = sorted(
+            self._requests.keys(),
+            key=lambda k: self._requests[k][-1][0] if self._requests[k] else 0.0,
+        )
+        for key in sorted_keys:
+            if total_entries <= self._HARD_CAP:
+                break
+            total_entries -= len(self._requests[key])
+            del self._requests[key]
+
+    def shutdown(self) -> None:
+        """Stop the background cleanup thread."""
+        self._shutdown_event.set()
+        self._cleanup_thread.join(timeout=5)
+
+    # ------------------------------------------------------------------
+    # Background thread
+    # ------------------------------------------------------------------
+
+    def _background_cleanup_loop(self) -> None:
+        """Periodically run cleanup until shutdown is requested."""
+        while not self._shutdown_event.is_set():
+            self._shutdown_event.wait(timeout=self._CLEANUP_INTERVAL_SECS)
+            if self._shutdown_event.is_set():
+                break
+            try:
+                self.cleanup()
+            except Exception:
+                logger.exception("Error in rate limiter background cleanup")
 
 
 class RedisRateLimiter:
