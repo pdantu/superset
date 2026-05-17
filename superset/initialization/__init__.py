@@ -37,7 +37,11 @@ from flask_compress import Compress
 from flask_session import Session
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-from superset.constants import CHANGE_ME_SECRET_KEY
+from superset.constants import (
+    CHANGE_ME_GLOBAL_ASYNC_QUERIES_JWT_SECRET,
+    CHANGE_ME_GUEST_TOKEN_JWT_SECRET,
+    CHANGE_ME_SECRET_KEY,
+)
 from superset.databases.utils import make_url_safe
 from superset.extensions import (
     _event_logger,
@@ -663,6 +667,31 @@ class SupersetAppInitializer:  # pylint: disable=too-many-public-methods
             logger.error("Refusing to start due to insecure SECRET_KEY")
             sys.exit(1)
 
+    def check_jwt_secrets(self) -> None:
+        if (
+            self.superset_app.debug
+            or self.superset_app.config.get("TESTING")
+            or is_test()
+        ):
+            return
+
+        guest_secret = self.config.get("GUEST_TOKEN_JWT_SECRET", "")
+        if not guest_secret or guest_secret == CHANGE_ME_GUEST_TOKEN_JWT_SECRET:
+            raise RuntimeError(
+                "GUEST_TOKEN_JWT_SECRET must be set to a secure value. "
+                "Use the SUPERSET_GUEST_TOKEN_JWT_SECRET environment variable "
+                "or set GUEST_TOKEN_JWT_SECRET in superset_config.py."
+            )
+
+        async_secret = self.config.get("GLOBAL_ASYNC_QUERIES_JWT_SECRET", "")
+        if not async_secret or async_secret == CHANGE_ME_GLOBAL_ASYNC_QUERIES_JWT_SECRET:
+            raise RuntimeError(
+                "GLOBAL_ASYNC_QUERIES_JWT_SECRET must be set to a secure value. "
+                "Use the SUPERSET_GLOBAL_ASYNC_QUERIES_JWT_SECRET environment "
+                "variable or set GLOBAL_ASYNC_QUERIES_JWT_SECRET in "
+                "superset_config.py."
+            )
+
     def configure_session(self) -> None:
         if self.config["SESSION_SERVER_SIDE"]:
             Session(self.superset_app)
@@ -741,6 +770,7 @@ class SupersetAppInitializer:  # pylint: disable=too-many-public-methods
         """
         self.pre_init()
         self.check_secret_key()
+        self.check_jwt_secrets()
         self.configure_session()
         # Configuration of logging must be done first to apply the formatter properly
         self.configure_logging()

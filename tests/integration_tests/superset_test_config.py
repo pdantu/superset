@@ -127,6 +127,7 @@ EXPLORE_FORM_DATA_CACHE_CONFIG = {
 }
 
 GLOBAL_ASYNC_QUERIES_JWT_SECRET = "test-secret-change-me-test-secret-change-me"  # noqa: S105
+GUEST_TOKEN_JWT_SECRET = "test-guest-secret-change-me-for-integration-tests"  # noqa: S105
 
 ALERT_REPORTS_WORKING_TIME_OUT_KILL = True
 

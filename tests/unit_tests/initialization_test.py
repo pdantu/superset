@@ -18,9 +18,14 @@
 import os
 from unittest.mock import MagicMock, patch
 
+import pytest
 from sqlalchemy.exc import OperationalError
 
 from superset.app import AppRootMiddleware, create_app, SupersetApp
+from superset.constants import (
+    CHANGE_ME_GLOBAL_ASYNC_QUERIES_JWT_SECRET,
+    CHANGE_ME_GUEST_TOKEN_JWT_SECRET,
+)
 from superset.initialization import SupersetAppInitializer
 
 
@@ -257,3 +262,71 @@ class TestCreateAppRoot:
 
         assert isinstance(app.wsgi_app, AppRootMiddleware)
         assert app.wsgi_app.app_root == "/from-param"
+
+
+class TestCheckJwtSecrets:
+    def _make_initializer(
+        self,
+        guest_secret: str = "secure-guest-secret-value-here",
+        async_secret: str = "secure-async-secret-value-here",
+        testing: bool = False,
+        debug: bool = False,
+    ) -> SupersetAppInitializer:
+        mock_app = MagicMock()
+        mock_app.debug = debug
+        mock_app.config = {
+            "TESTING": testing,
+            "GUEST_TOKEN_JWT_SECRET": guest_secret,
+            "GLOBAL_ASYNC_QUERIES_JWT_SECRET": async_secret,
+        }
+        return SupersetAppInitializer(mock_app)
+
+    def test_raises_on_default_guest_token_secret(self):
+        init = self._make_initializer(
+            guest_secret=CHANGE_ME_GUEST_TOKEN_JWT_SECRET,
+        )
+        with pytest.raises(RuntimeError, match="GUEST_TOKEN_JWT_SECRET"):
+            init.check_jwt_secrets()
+
+    def test_raises_on_default_async_queries_secret(self):
+        init = self._make_initializer(
+            async_secret=CHANGE_ME_GLOBAL_ASYNC_QUERIES_JWT_SECRET,
+        )
+        with pytest.raises(RuntimeError, match="GLOBAL_ASYNC_QUERIES_JWT_SECRET"):
+            init.check_jwt_secrets()
+
+    def test_raises_on_empty_guest_token_secret(self):
+        init = self._make_initializer(guest_secret="")
+        with pytest.raises(RuntimeError, match="GUEST_TOKEN_JWT_SECRET"):
+            init.check_jwt_secrets()
+
+    def test_raises_on_empty_async_queries_secret(self):
+        init = self._make_initializer(
+            guest_secret="secure-guest-secret-value-here",
+            async_secret="",
+        )
+        with pytest.raises(RuntimeError, match="GLOBAL_ASYNC_QUERIES_JWT_SECRET"):
+            init.check_jwt_secrets()
+
+    def test_passes_with_secure_secrets(self):
+        init = self._make_initializer(
+            guest_secret="my-secure-guest-secret",
+            async_secret="my-secure-async-secret",
+        )
+        init.check_jwt_secrets()
+
+    def test_skipped_in_testing_mode(self):
+        init = self._make_initializer(
+            guest_secret=CHANGE_ME_GUEST_TOKEN_JWT_SECRET,
+            async_secret=CHANGE_ME_GLOBAL_ASYNC_QUERIES_JWT_SECRET,
+            testing=True,
+        )
+        init.check_jwt_secrets()
+
+    def test_skipped_in_debug_mode(self):
+        init = self._make_initializer(
+            guest_secret=CHANGE_ME_GUEST_TOKEN_JWT_SECRET,
+            async_secret=CHANGE_ME_GLOBAL_ASYNC_QUERIES_JWT_SECRET,
+            debug=True,
+        )
+        init.check_jwt_secrets()
