@@ -21,6 +21,16 @@ import subprocess
 PORT_TIMEOUT = 5
 PING_TIMEOUT = 5
 
+MIN_PORT = 1
+MAX_PORT = 65535
+
+
+def is_valid_port(port: int) -> bool:
+    """
+    Check whether a given port number is within the valid TCP/UDP range (1-65535).
+    """
+    return isinstance(port, int) and MIN_PORT <= port <= MAX_PORT
+
 
 def is_port_open(host: str, port: int) -> bool:
     """
